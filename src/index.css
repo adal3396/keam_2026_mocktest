@@ -1,103 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  font-family: 'Open Sans', 'Roboto', sans-serif;
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    --primary: 217 72% 46%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 160 60% 42%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 38 92% 55%;
+    --accent-foreground: 38 80% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 217 72% 46%;
+
+    --radius: 0.75rem;
+
+    --success: 160 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 80% 15%;
+
+    --sidebar-background: 220 25% 10%;
+    --sidebar-foreground: 220 14% 92%;
+    --sidebar-primary: 217 72% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 18%;
+    --sidebar-accent-foreground: 220 14% 92%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 217 72% 56%;
+
+    --font-heading: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 14% 92%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 14% 92%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 14% 92%;
+    --primary: 217 72% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 60% 42%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 38 80% 15%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 217 72% 56%;
+  }
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f0f0f0;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #e0e0e0;
-}
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-/* Question status legend colors - matching official NTA/KEAM CBT */
-.status-not-visited {
-  background-color: #9e9e9e;
-  color: white;
-}
-.status-not-answered {
-  background-color: #f44336;
-  color: white;
-}
-.status-answered {
-  background-color: #4caf50;
-  color: white;
-}
-.status-marked {
-  background-color: #9c27b0;
-  color: white;
-}
-.status-answered-marked {
-  background: linear-gradient(135deg, #9c27b0 60%, #4caf50 60%);
-  color: white;
-  position: relative;
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+  }
+  .gradient-hero {
+    background: linear-gradient(135deg, #f5f3ff, #ecfeff);
+  }
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(160 60% 42%), hsl(160 60% 52%));
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
 }
 
-/* Option radio styling */
-.option-label {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-.option-label:hover {
-  background-color: #e8f4fd;
-}
-.option-selected {
-  background-color: #d0e8ff;
-  border-color: #1976d2 !important;
+@keyframes aurora {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(4vw, -4vh) scale(1.1) rotate(5deg); }
+  50% { transform: translate(-2vw, 5vh) scale(0.9) rotate(-5deg); }
+  75% { transform: translate(-5vw, -2vh) scale(1.1) rotate(3deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
 }
 
-/* Timer warning */
-.timer-warning {
-  animation: blink 1s infinite;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes shooting-star {
+  0% { transform: translateX(-20vw) translateY(-20vh) rotate(45deg); opacity: 1; }
+  20% { opacity: 1; }
+  100% { transform: translateX(120vw) translateY(120vh) rotate(45deg); opacity: 0; }
 }
 
-/* Instruction page */
-.instruction-section {
-  border-left: 4px solid #1976d2;
-  padding-left: 12px;
+@keyframes float-grid {
+  0% { background-position: 0 0; }
+  100% { background-position: 4rem 4rem; }
 }
 
-/* Question text */
-.question-text {
-  font-size: 15px;
-  line-height: 1.7;
-  color: #212121;
+.animate-aurora {
+  animation: aurora 20s ease-in-out infinite alternate;
 }
 
-/* Section tab active */
-.section-tab-active {
-  background-color: #1976d2;
-  color: white;
-  border-bottom: 3px solid #0d47a1;
-}
-.section-tab {
-  background-color: #e3f2fd;
-  color: #1976d2;
+.animate-shooting-star {
+  animation: shooting-star 2s linear infinite;
 }
 
-/* Print optimization */
-@media print {
-  .no-print { display: none; }
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse 45s linear infinite;
 }
