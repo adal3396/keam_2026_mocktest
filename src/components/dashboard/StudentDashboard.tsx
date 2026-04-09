@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import AppHeader from '@/components/layout/AppHeader';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Clock, FileText, Trophy, BarChart3, AlertCircle, CheckCircle2, Info, RefreshCw } from 'lucide-react';
+import { Clock, FileText, Trophy, BarChart3, AlertCircle, CheckCircle2, Info, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Exam {
@@ -38,6 +38,14 @@ export default function StudentDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedExamForInstructions, setSelectedExamForInstructions] = useState<Exam | null>(null);
   const [isStartingExam, setIsStartingExam] = useState(false);
+  const [newExamNotification, setNewExamNotification] = useState<Exam | null>(null);
+  const examsRef = useRef<Exam[]>([]);
+
+  useEffect(() => {
+    examsRef.current = exams;
+  }, [exams]);
+
+  const studentName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
 
   const loadData = async (silent = false) => {
     if (!user) return;
@@ -85,6 +93,21 @@ export default function StudentDashboard() {
         { event: '*', schema: 'public', table: 'exams' },
         (payload) => {
           console.log('Exams table updated, reloading data silently...', payload);
+          
+          const newRecord = payload.new as any;
+          if (newRecord && newRecord.is_active === true) {
+            const alreadyExists = examsRef.current.some(e => e.id === newRecord.id);
+            if (!alreadyExists) {
+              setNewExamNotification({
+                id: newRecord.id,
+                title: newRecord.title,
+                description: newRecord.description,
+                duration_minutes: newRecord.duration_minutes,
+                total_marks: newRecord.total_marks
+              });
+            }
+          }
+          
           loadData(true); // Silent reload
         }
       )
@@ -330,6 +353,39 @@ export default function StudentDashboard() {
                 className="gap-2"
               >
                 {isStartingExam ? 'Starting...' : <><CheckCircle2 className="w-4 h-4" /> I Agree, Start Test</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* New Exam Notification Popup */}
+        <Dialog open={!!newExamNotification} onOpenChange={(open) => !open && setNewExamNotification(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-heading text-primary flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 text-primary" /> New Exam Activated!
+              </DialogTitle>
+              <DialogDescription className="text-base pt-2 text-slate-700">
+                Hello <strong className="text-slate-900 capitalize">{studentName}</strong>,
+                <br /><br />
+                The exam <strong className="text-slate-900">"{newExamNotification?.title}"</strong> is now active and ready for you to take.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4 sm:justify-end gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setNewExamNotification(null)} disabled={isStartingExam}>
+                Dismiss
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (newExamNotification) {
+                    setNewExamNotification(null); // Close popup before opening instructions
+                    handleStartExamClick(newExamNotification, false);
+                  }
+                }} 
+                disabled={isStartingExam}
+                className="gap-2"
+              >
+                {isStartingExam ? 'Starting...' : <><PlayCircle className="w-4 h-4" /> View Details & Start</>}
               </Button>
             </DialogFooter>
           </DialogContent>
