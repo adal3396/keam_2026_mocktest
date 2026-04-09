@@ -39,9 +39,9 @@ export default function StudentDashboard() {
   const [selectedExamForInstructions, setSelectedExamForInstructions] = useState<Exam | null>(null);
   const [isStartingExam, setIsStartingExam] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (silent = false) => {
     if (!user) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
 
     try {
@@ -68,12 +68,31 @@ export default function StudentDashboard() {
       console.error('Dashboard load error:', err);
       setError('Something went wrong. Please check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+
+    if (!user) return;
+
+    // Subscribe to exams table changes for real-time updates
+    const channel = supabase
+      .channel('public:exams')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'exams' },
+        (payload) => {
+          console.log('Exams table updated, reloading data silently...', payload);
+          loadData(true); // Silent reload
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleStartExamClick = (exam: Exam, hasAttempt: boolean) => {
