@@ -54,6 +54,7 @@ export default function ExamTaking() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [examTitle, setExamTitle] = useState('');
+  const [examId, setExamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +82,7 @@ export default function ExamTaking() {
         return;
       }
       setExamTitle(exam.title);
+      setExamId(exam.id);
 
       const startTime = new Date(typedAttempt.started_at).getTime();
       const endTime = startTime + exam.duration_minutes * 60 * 1000;
@@ -156,6 +158,33 @@ export default function ExamTaking() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [loading, handleSubmit]);
+
+  useEffect(() => {
+    if (!examId) return;
+
+    // Listen for admin ending the exam real-time!
+    const channel = supabase
+      .channel(`public:exams:taker:${examId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'exams', filter: `id=eq.${examId}` },
+        (payload) => {
+          const newRecord = payload.new as any;
+          if (newRecord && newRecord.is_active === false) {
+             console.log('🚨 ADMIN DEACTIVATED THE EXAM - AUTO SUBMITTING');
+             toast.error('The admin has ended this exam!', { duration: 5000 });
+             if (!submitInFlightRef.current) {
+               handleSubmit(true);
+             }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [examId, handleSubmit]);
 
   const selectOption = async (questionId: string, option: string) => {
     const existing = answers.get(questionId);

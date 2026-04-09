@@ -35,12 +35,12 @@ export default function Leaderboard() {
     });
   }, []);
 
-  useEffect(() => {
+  const loadLeaderboard = (silent = false) => {
     if (!selectedExam) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     supabase.rpc('get_exam_leaderboard', { _exam_id: selectedExam, _limit: 50 }).then(({ data, error }) => {
       if (error) {
-        toast.error(error.message || 'Failed to load leaderboard');
+        if (!silent) toast.error(error.message || 'Failed to load leaderboard');
         setEntries([]);
         setLoading(false);
         return;
@@ -59,6 +59,31 @@ export default function Leaderboard() {
       setEntries(normalized);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadLeaderboard();
+
+    if (!selectedExam) return;
+
+    // Realtime leaderboard updates!
+    const channel = supabase
+      .channel('public:exam_attempts:leaderboard')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'exam_attempts', filter: `exam_id=eq.${selectedExam}` },
+        (payload) => {
+          if (payload.new && (payload.new as any).status === 'submitted') {
+            console.log('New submission received, updating leaderboard live!');
+            loadLeaderboard(true); // Silent reload
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedExam]);
 
   return (
