@@ -13,10 +13,12 @@ interface Question {
   id: string;
   subject: string;
   question_text: string;
+  image_url?: string;
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string;
   marks: number;
   negative_marks: number;
   question_order: number;
@@ -358,18 +360,24 @@ export default function ExamTaking() {
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
                   <p className="text-base leading-relaxed whitespace-pre-wrap">{currentQ.question_text}</p>
+                  {currentQ.image_url && (
+                    <div className="mt-4">
+                      <img src={currentQ.image_url} alt="Question figure" className="max-h-64 rounded-md border shadow-sm" />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Options - KEAM style with radio buttons */}
               <div className="space-y-3">
-                {(['A', 'B', 'C', 'D'] as const).map(opt => {
+                {(['A', 'B', 'C', 'D', 'E'] as const).map(opt => {
                   const isSelected = currentAnswer?.selected_option === opt;
-                  const optionTextByKey: Record<'A' | 'B' | 'C' | 'D', string> = {
+                  const optionTextByKey: Record<'A' | 'B' | 'C' | 'D' | 'E', string> = {
                     A: currentQ.option_a,
                     B: currentQ.option_b,
                     C: currentQ.option_c,
                     D: currentQ.option_d,
+                    E: currentQ.option_e,
                   };
                   return (
                     <button

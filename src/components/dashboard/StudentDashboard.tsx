@@ -111,7 +111,9 @@ export default function StudentDashboard() {
           loadData(true); // Silent reload
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Supabase realtime status for exams:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

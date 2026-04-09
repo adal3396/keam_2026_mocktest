@@ -23,6 +23,8 @@ interface ReviewQuestion {
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string;
+  image_url?: string;
   correct_option: string;
   selected_option: string | null;
   marks: number;
@@ -117,9 +119,14 @@ export default function Results() {
                 </div>
 
                 <p className="whitespace-pre-wrap">{q.question_text}</p>
+                {q.image_url && (
+                  <div className="mt-2">
+                    <img src={q.image_url} alt="Question figure" className="max-h-48 rounded border shadow-sm" />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {(['A', 'B', 'C', 'D'] as const).map(opt => {
+                  {(['A', 'B', 'C', 'D', 'E'] as const).map(opt => {
                     const isThisCorrect = q.correct_option === opt;
                     const isThisSelected = selected === opt;
                     let classes = 'p-3 rounded-lg border text-sm ';
@@ -130,7 +137,7 @@ export default function Results() {
                     return (
                       <div key={opt} className={classes}>
                         <span className="font-bold mr-2">{opt}.</span>
-                        {q[`option_${opt.toLowerCase()}`]}
+                        {opt === 'E' ? q.option_e : q[`option_${opt.toLowerCase()}` as keyof ReviewQuestion]}
                         {isThisCorrect && <CheckCircle className="w-4 h-4 inline ml-2 text-success" />}
                         {isThisSelected && !isThisCorrect && <XCircle className="w-4 h-4 inline ml-2 text-destructive" />}
                       </div>

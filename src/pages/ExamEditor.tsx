@@ -9,16 +9,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, ImagePlus, X } from 'lucide-react';
 
 interface Question {
   id?: string;
   subject: string;
   question_text: string;
+  image_url?: string;
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string;
   correct_option: string;
   marks: number;
   negative_marks: number;
@@ -26,6 +28,17 @@ interface Question {
 }
 
 type EditableQuestionField = keyof Question;
+
+const uploadImage = async (file: File) => {
+  const fileExt = file.name.split('.').pop();
+  const filePath = `${Math.random()}.${fileExt}`;
+  
+  const { error: uploadError } = await supabase.storage.from('exam-images').upload(filePath, file);
+  if (uploadError) { throw uploadError; }
+  
+  const { data: { publicUrl } } = supabase.storage.from('exam-images').getPublicUrl(filePath);
+  return publicUrl;
+};
 
 export default function ExamEditor() {
   const { id } = useParams();
@@ -57,10 +70,12 @@ export default function ExamEditor() {
     setQuestions([...questions, {
       subject: 'physics',
       question_text: '',
+      image_url: '',
       option_a: '',
       option_b: '',
       option_c: '',
       option_d: '',
+      option_e: '',
       correct_option: 'A',
       marks: 4,
       negative_marks: 1,
@@ -76,6 +91,20 @@ export default function ExamEditor() {
     setQuestions(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const uploadToast = toast.loading('Uploading image...');
+    try {
+      const url = await uploadImage(file);
+      updateQuestion(idx, 'image_url', url);
+      toast.success('Image uploaded', { id: uploadToast });
+    } catch (err) {
+      toast.error('Image upload failed', { id: uploadToast });
+    }
+    e.target.value = '';
+  };
+
   const save = async () => {
     if (!title.trim()) { toast.error('Please enter exam title'); return; }
     setSaving(true);
@@ -83,10 +112,12 @@ export default function ExamEditor() {
       const payload = questions.map((q, i) => ({
         subject: q.subject,
         question_text: q.question_text,
+        image_url: q.image_url,
         option_a: q.option_a,
         option_b: q.option_b,
         option_c: q.option_c,
         option_d: q.option_d,
+        option_e: q.option_e,
         correct_option: q.correct_option,
         marks: q.marks,
         negative_marks: q.negative_marks,
@@ -174,10 +205,23 @@ export default function ExamEditor() {
               <div className="space-y-2">
                 <Label>Question</Label>
                 <Textarea value={q.question_text} onChange={e => updateQuestion(idx, 'question_text', e.target.value)} placeholder="Enter question text..." />
+                {q.image_url ? (
+                  <div className="relative inline-block mt-2">
+                     <img src={q.image_url} alt="Question" className="max-h-40 rounded border shadow-sm" />
+                     <button type="button" className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:scale-105 transition-transform" onClick={() => updateQuestion(idx, 'image_url', '')}><X className="w-3 h-3" /></button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Label className="cursor-pointer flex items-center gap-2 border p-2 rounded-md hover:bg-muted/50 transition-colors text-sm text-muted-foreground">
+                      <ImagePlus className="w-4 h-4" /> Add Image
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, idx)} />
+                    </Label>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(['A', 'B', 'C', 'D'] as const).map(opt => (
+                {(['A', 'B', 'C', 'D', 'E'] as const).map(opt => (
                   <div key={opt} className="space-y-1">
                     <Label className="text-xs">Option {opt}</Label>
                     <Input
@@ -185,7 +229,8 @@ export default function ExamEditor() {
                         opt === 'A' ? q.option_a :
                         opt === 'B' ? q.option_b :
                         opt === 'C' ? q.option_c :
-                        q.option_d
+                        opt === 'D' ? q.option_d :
+                        q.option_e
                       }
                       onChange={e => updateQuestion(idx, (`option_${opt.toLowerCase()}` as EditableQuestionField), e.target.value)}
                       placeholder={`Option ${opt}`}
@@ -200,7 +245,7 @@ export default function ExamEditor() {
                   <Select value={q.correct_option} onValueChange={v => updateQuestion(idx, 'correct_option', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {['A', 'B', 'C', 'D'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      {['A', 'B', 'C', 'D', 'E'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
