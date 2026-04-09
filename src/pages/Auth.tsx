@@ -37,7 +37,23 @@ export default function Auth() {
       } else {
         await signIn(email, password);
         toast.success('Welcome back!');
-        navigate('/dashboard');
+        // Check role to redirect to correct dashboard
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .limit(1)
+            .maybeSingle();
+          if (roleData?.role === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Authentication failed';

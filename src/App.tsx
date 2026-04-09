@@ -6,9 +6,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { AnimatePresence } from "framer-motion";
+import ErrorBoundary from "./components/layout/ErrorBoundary";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import AdminPage from "./pages/AdminPage.tsx";
 import ExamEditor from "./pages/ExamEditor.tsx";
 import ExamTaking from "./pages/ExamTaking.tsx";
 import Results from "./pages/Results.tsx";
@@ -42,6 +44,7 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<PageTransition><Index /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
         <Route path="/dashboard" element={<PageTransition><RequireAuth><Dashboard /></RequireAuth></PageTransition>} />
+        <Route path="/admin/dashboard" element={<PageTransition><RequireAdmin><AdminPage /></RequireAdmin></PageTransition>} />
         <Route path="/admin/exam/:id" element={<PageTransition><RequireAdmin><ExamEditor /></RequireAdmin></PageTransition>} />
         <Route path="/exam/:attemptId" element={<PageTransition><RequireAuth><ExamTaking /></RequireAuth></PageTransition>} />
         <Route path="/results/:attemptId" element={<PageTransition><RequireAuth><Results /></RequireAuth></PageTransition>} />
@@ -71,8 +74,10 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <AnimatedBackground />
-            <AnimatedRoutes />
+            <ErrorBoundary>
+              <AnimatedBackground />
+              <AnimatedRoutes />
+            </ErrorBoundary>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

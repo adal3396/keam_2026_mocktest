@@ -10,12 +10,23 @@ export default function AppHeader() {
 
   const handleSignOut = async () => {
     await signOut();
+    navigate('/', { replace: true });
+  };
+
+  const handleLogoClick = () => {
+    if (!user) {
+      navigate('/');
+    } else if (role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
     <header className="border-b bg-card">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={handleLogoClick}>
           <img src={logoImage} alt="KSU GECT logo" className="h-12 w-auto object-contain py-1" />
           <div>
             <h1 className="text-lg font-heading font-bold leading-none">KEAM 2026 Mock Test</h1>

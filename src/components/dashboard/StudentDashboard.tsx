@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Clock, FileText, Trophy, BarChart3, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { Clock, FileText, Trophy, BarChart3, AlertCircle, CheckCircle2, Info, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Exam {
@@ -35,21 +35,45 @@ export default function StudentDashboard() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedExamForInstructions, setSelectedExamForInstructions] = useState<Exam | null>(null);
   const [isStartingExam, setIsStartingExam] = useState(false);
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!user) return;
-    const load = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
       const [examsRes, attemptsRes] = await Promise.all([
         supabase.from('exams').select('*').eq('is_active', true),
         supabase.from('exam_attempts').select('*, exams(title)').eq('user_id', user.id).order('started_at', { ascending: false }),
       ]);
-      if (examsRes.data) setExams(examsRes.data);
-      if (attemptsRes.data) setAttempts(attemptsRes.data as Attempt[]);
+
+      if (examsRes.error) {
+        console.error('Failed to load exams:', examsRes.error);
+        setError('Failed to load available tests. Please try again.');
+        setLoading(false);
+        return;
+      }
+      if (attemptsRes.error) {
+        console.error('Failed to load attempts:', attemptsRes.error);
+        // Non-critical: still show exams even if attempts fail
+        toast.error('Could not load your past attempts.');
+      }
+
+      setExams(examsRes.data ?? []);
+      setAttempts((attemptsRes.data as Attempt[]) ?? []);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      setError('Something went wrong. Please check your connection and try again.');
+    } finally {
       setLoading(false);
-    };
-    load();
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [user]);
 
   const handleStartExamClick = (exam: Exam, hasAttempt: boolean) => {
@@ -64,17 +88,52 @@ export default function StudentDashboard() {
 
   const startExam = async (examId: string) => {
     setIsStartingExam(true);
-    const { data, error } = await supabase.rpc('start_or_resume_attempt', { _exam_id: examId });
-    setIsStartingExam(false);
-    if (error || !data) {
-      toast.error(error?.message || 'Unable to start exam');
+    try {
+      const { data, error } = await supabase.rpc('start_or_resume_attempt', { _exam_id: examId });
+      if (error || !data) {
+        toast.error(error?.message || 'Unable to start exam. Please try again.');
+        setSelectedExamForInstructions(null);
+        return;
+      }
+      navigate(`/exam/${data}`);
+    } catch (err) {
+      console.error('Start exam error:', err);
+      toast.error('Network error. Please check your connection.');
       setSelectedExamForInstructions(null);
-      return;
+    } finally {
+      setIsStartingExam(false);
     }
-    navigate(`/exam/${data}`);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 4rem)' }}>
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground text-sm">Loading your dashboard...</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 4rem)' }}>
+        <div className="text-center space-y-4 max-w-md px-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <h2 className="text-xl font-heading font-bold">Unable to Load Dashboard</h2>
+          <p className="text-muted-foreground text-sm">{error}</p>
+          <Button onClick={loadData} className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Retry
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   const submittedAttempts = attempts.filter(a => a.status === 'submitted');
   const bestScore = submittedAttempts.length > 0 ? Math.max(...submittedAttempts.map(a => a.total_score ?? 0)) : 0;

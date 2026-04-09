@@ -23,23 +23,50 @@ export default function ExamManager() {
   const navigate = useNavigate();
 
   const loadExams = async () => {
-    const { data } = await supabase.from('exams').select('*').order('created_at', { ascending: false });
-    if (data) setExams(data);
+    try {
+      const { data, error } = await supabase.from('exams').select('*').order('created_at', { ascending: false });
+      if (error) {
+        toast.error(error.message || 'Failed to load exams');
+        return;
+      }
+      if (data) setExams(data);
+    } catch (err) {
+      console.error('Load exams error:', err);
+      toast.error('Network error loading exams.');
+    }
   };
 
   useEffect(() => { loadExams(); }, []);
 
   const toggleActive = async (id: string, active: boolean) => {
-    await supabase.from('exams').update({ is_active: active }).eq('id', id);
-    setExams(prev => prev.map(e => e.id === id ? { ...e, is_active: active } : e));
-    toast.success(active ? 'Exam activated' : 'Exam deactivated');
+    try {
+      const { error } = await supabase.from('exams').update({ is_active: active }).eq('id', id);
+      if (error) {
+        toast.error(error.message || 'Failed to update exam status');
+        return;
+      }
+      setExams(prev => prev.map(e => e.id === id ? { ...e, is_active: active } : e));
+      toast.success(active ? 'Exam activated — students can now take it' : 'Exam deactivated');
+    } catch (err) {
+      console.error('Toggle active error:', err);
+      toast.error('Network error. Please try again.');
+    }
   };
 
   const deleteExam = async (id: string) => {
     if (!confirm('Delete this exam and all its questions?')) return;
-    await supabase.from('exams').delete().eq('id', id);
-    setExams(prev => prev.filter(e => e.id !== id));
-    toast.success('Exam deleted');
+    try {
+      const { error } = await supabase.from('exams').delete().eq('id', id);
+      if (error) {
+        toast.error(error.message || 'Failed to delete exam');
+        return;
+      }
+      setExams(prev => prev.filter(e => e.id !== id));
+      toast.success('Exam deleted');
+    } catch (err) {
+      console.error('Delete exam error:', err);
+      toast.error('Network error. Please try again.');
+    }
   };
 
   return (

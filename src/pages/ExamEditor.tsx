@@ -103,7 +103,7 @@ export default function ExamEditor() {
       if (error) throw error;
 
       toast.success('Exam saved!');
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save exam';
       toast.error(message);
@@ -116,8 +116,8 @@ export default function ExamEditor() {
     <div className="min-h-screen text-foreground">
       <AppHeader />
       <main className="container py-8 max-w-4xl space-y-6">
-        <Button variant="ghost" onClick={() => navigate('/')}>
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        <Button variant="ghost" onClick={() => navigate('/admin/dashboard')}>
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Dashboard
         </Button>
 
         <Card>

@@ -6,28 +6,48 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, FileText, Trophy } from 'lucide-react';
+import { Plus, Users, FileText, Trophy, AlertCircle, RefreshCw } from 'lucide-react';
 import ExamManager from '@/components/admin/ExamManager';
 import Leaderboard from '@/components/admin/Leaderboard';
+import { toast } from 'sonner';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ exams: 0, attempts: 0, students: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
+  const loadStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const [exams, attempts, students] = await Promise.all([
         supabase.from('exams').select('id', { count: 'exact', head: true }),
         supabase.from('exam_attempts').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
       ]);
+
+      if (exams.error || attempts.error || students.error) {
+        const errMsg = exams.error?.message || attempts.error?.message || students.error?.message || 'Unknown error';
+        console.error('Admin stats error:', errMsg);
+        setError('Failed to load dashboard stats.');
+      }
+
       setStats({
         exams: exams.count ?? 0,
         attempts: attempts.count ?? 0,
         students: students.count ?? 0,
       });
-    };
-    load();
+    } catch (err) {
+      console.error('Admin dashboard error:', err);
+      setError('Something went wrong loading the dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
   }, []);
 
   return (
@@ -40,6 +60,16 @@ export default function AdminDashboard() {
             <Plus className="w-4 h-4 mr-1" /> Create Exam
           </Button>
         </div>
+
+        {error && (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-sm">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+            <span className="flex-1">{error}</span>
+            <Button variant="outline" size="sm" onClick={loadStats} className="gap-1">
+              <RefreshCw className="w-3 h-3" /> Retry
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
