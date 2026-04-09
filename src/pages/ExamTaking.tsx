@@ -17,6 +17,7 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
+  option_e: string;  
   marks: number;
   negative_marks: number;
   question_order: number;
