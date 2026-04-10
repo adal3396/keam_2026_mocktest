@@ -5,12 +5,15 @@ import LandingPage from '@/components/landing/LandingPage';
 import LoadingScreen from '@/components/layout/LoadingScreen';
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen fullScreen={true} />;
   }
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    if (role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
   return <LandingPage />;
 }

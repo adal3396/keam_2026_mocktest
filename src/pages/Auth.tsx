@@ -33,11 +33,10 @@ export default function Auth() {
       if (isSignUp) {
         await signUp(email, password, fullName);
         toast.success('Account created successfully.');
-        setIsSignUp(false);
+        // Automatic redirection handled by useEffect once role is synced
       } else {
         await signIn(email, password);
         toast.success('Welcome back!');
-        // Role check is handled by the useEffect above once the auth state changes
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Authentication failed';
@@ -46,6 +45,17 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
+  if (user && !role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-transparent">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-slate-600 font-medium">Preparing your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden text-slate-900 bg-transparent">
