@@ -8,23 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import logoImage from '@/assets/ksu-logo.png';
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, role, user } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect if already logged in
   useEffect(() => {
-    const t = setTimeout(() => {
-      toast.error('If login is stuck, check Supabase URL/keys or internet connection.');
-    }, 8000);
-    supabase.auth.getSession().finally(() => clearTimeout(t));
-    return () => clearTimeout(t);
-  }, []);
+    if (user && role) {
+      if (role === 'admin') navigate('/admin/dashboard');
+      else navigate('/dashboard');
+    }
+  }, [user, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,23 +37,7 @@ export default function Auth() {
       } else {
         await signIn(email, password);
         toast.success('Welcome back!');
-        // Check role to redirect to correct dashboard
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .limit(1)
-            .maybeSingle();
-          if (roleData?.role === 'admin') {
-            navigate('/admin/dashboard');
-          } else {
-            navigate('/dashboard');
-          }
-        } else {
-          navigate('/dashboard');
-        }
+        // Role check is handled by the useEffect above once the auth state changes
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Authentication failed';

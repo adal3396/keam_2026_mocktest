@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Eye } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Exam {
   id: string;
   title: string;
   description: string | null;
-  duration_minutes: number;
-  total_marks: number;
-  is_active: boolean;
-  created_at: string;
+  durationMinutes: number;
+  totalMarks: number;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export default function ExamManager() {
@@ -24,11 +24,7 @@ export default function ExamManager() {
 
   const loadExams = async () => {
     try {
-      const { data, error } = await supabase.from('exams').select('*').order('created_at', { ascending: false });
-      if (error) {
-        toast.error(error.message || 'Failed to load exams');
-        return;
-      }
+      const data = await api.exams.list();
       if (data) setExams(data);
     } catch (err) {
       console.error('Load exams error:', err);
@@ -40,12 +36,8 @@ export default function ExamManager() {
 
   const toggleActive = async (id: string, active: boolean) => {
     try {
-      const { error } = await supabase.from('exams').update({ is_active: active }).eq('id', id);
-      if (error) {
-        toast.error(error.message || 'Failed to update exam status');
-        return;
-      }
-      setExams(prev => prev.map(e => e.id === id ? { ...e, is_active: active } : e));
+      await api.exams.toggleActive(id, active);
+      setExams(prev => prev.map(e => e.id === id ? { ...e, isActive: active } : e));
       toast.success(active ? 'Exam activated — students can now take it' : 'Exam deactivated');
     } catch (err) {
       console.error('Toggle active error:', err);
@@ -56,11 +48,7 @@ export default function ExamManager() {
   const deleteExam = async (id: string) => {
     if (!confirm('Delete this exam and all its questions?')) return;
     try {
-      const { error } = await supabase.from('exams').delete().eq('id', id);
-      if (error) {
-        toast.error(error.message || 'Failed to delete exam');
-        return;
-      }
+      await api.exams.delete(id);
       setExams(prev => prev.filter(e => e.id !== id));
       toast.success('Exam deleted');
     } catch (err) {
@@ -80,16 +68,16 @@ export default function ExamManager() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <p className="font-heading font-semibold">{exam.title}</p>
-                  <Badge variant={exam.is_active ? 'default' : 'secondary'}>
-                    {exam.is_active ? 'Active' : 'Draft'}
+                  <Badge variant={exam.isActive ? 'default' : 'secondary'}>
+                    {exam.isActive ? 'Active' : 'Draft'}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {exam.duration_minutes} min • {exam.total_marks} marks
+                  {exam.durationMinutes} min • {exam.totalMarks} marks
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={exam.is_active} onCheckedChange={(v) => toggleActive(exam.id, v)} />
+                <Switch checked={exam.isActive} onCheckedChange={(v) => toggleActive(exam.id, v)} />
                 <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/exam/${exam.id}`)}>
                   <Edit className="w-4 h-4" />
                 </Button>

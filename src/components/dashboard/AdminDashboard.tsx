@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import AppHeader from '@/components/layout/AppHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Users, FileText, Trophy, AlertCircle, RefreshCw } from 'lucide-react';
 import ExamManager from '@/components/admin/ExamManager';
 import Leaderboard from '@/components/admin/Leaderboard';
-import { toast } from 'sonner';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -21,23 +18,10 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [exams, attempts, students] = await Promise.all([
-        supabase.from('exams').select('id', { count: 'exact', head: true }),
-        supabase.from('exam_attempts').select('id', { count: 'exact', head: true }).eq('status', 'submitted'),
-        supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
-      ]);
-
-      if (exams.error || attempts.error || students.error) {
-        const errMsg = exams.error?.message || attempts.error?.message || students.error?.message || 'Unknown error';
-        console.error('Admin stats error:', errMsg);
-        setError('Failed to load dashboard stats.');
-      }
-
-      setStats({
-        exams: exams.count ?? 0,
-        attempts: attempts.count ?? 0,
-        students: students.count ?? 0,
-      });
+      const resp = await fetch('/api/stats');
+      if (!resp.ok) throw new Error('Failed to load stats');
+      const data = await resp.json();
+      setStats(data);
     } catch (err) {
       console.error('Admin dashboard error:', err);
       setError('Something went wrong loading the dashboard.');

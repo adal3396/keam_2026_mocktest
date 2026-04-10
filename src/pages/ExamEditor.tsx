@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/services/api';
+import { auth, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import AppHeader from '@/components/layout/AppHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,31 +15,30 @@ import { ArrowLeft, Plus, Trash2, Save, ImagePlus, X } from 'lucide-react';
 
 interface Question {
   id?: string;
-  subject: string;
-  question_text: string;
-  image_url?: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  option_e: string;
-  correct_option: string;
+  subject: 'physics' | 'chemistry' | 'mathematics';
+  questionText: string;
+  imageUrl?: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  optionE: string;
+  correctOption: string;
   marks: number;
-  negative_marks: number;
-  question_order: number;
+  negativeMarks: number;
+  questionOrder: number;
 }
 
 type EditableQuestionField = keyof Question;
 
 const uploadImage = async (file: File) => {
   const fileExt = file.name.split('.').pop();
-  const filePath = `${Math.random()}.${fileExt}`;
+  const filePath = `exam-images/${Math.random()}.${fileExt}`;
+  const storageRef = ref(storage, filePath);
   
-  const { error: uploadError } = await supabase.storage.from('exam-images').upload(filePath, file);
-  if (uploadError) { throw uploadError; }
-  
-  const { data: { publicUrl } } = supabase.storage.from('exam-images').getPublicUrl(filePath);
-  return publicUrl;
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  return url;
 };
 
 export default function ExamEditor() {
@@ -53,15 +54,13 @@ export default function ExamEditor() {
 
   useEffect(() => {
     if (!isNew && id) {
-      supabase.from('exams').select('*').eq('id', id).single().then(({ data }) => {
+      api.exams.get(id).then((data) => {
         if (data) {
           setTitle(data.title);
           setDescription(data.description || '');
-          setDurationMinutes(data.duration_minutes);
+          setDurationMinutes(data.durationMinutes);
+          setQuestions(data.questions || []);
         }
-      });
-      supabase.from('questions').select('*').eq('exam_id', id).order('question_order').then(({ data }) => {
-        if (data) setQuestions(data as Question[]);
       });
     }
   }, [id, isNew]);
@@ -69,21 +68,21 @@ export default function ExamEditor() {
   const addQuestion = () => {
     setQuestions([...questions, {
       subject: 'physics',
-      question_text: '',
-      image_url: '',
-      option_a: '',
-      option_b: '',
-      option_c: '',
-      option_d: '',
-      option_e: '',
-      correct_option: 'A',
+      questionText: '',
+      imageUrl: '',
+      optionA: '',
+      optionB: '',
+      optionC: '',
+      optionD: '',
+      optionE: '',
+      correctOption: 'A',
       marks: 4,
-      negative_marks: 1,
-      question_order: questions.length + 1,
+      negativeMarks: 1,
+      questionOrder: questions.length + 1,
     }]);
   };
 
-  const updateQuestion = (idx: number, field: EditableQuestionField, value: Question[EditableQuestionField]) => {
+  const updateQuestion = (idx: number, field: EditableQuestionField, value: any) => {
     setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
   };
 
@@ -97,7 +96,7 @@ export default function ExamEditor() {
     const uploadToast = toast.loading('Uploading image...');
     try {
       const url = await uploadImage(file);
-      updateQuestion(idx, 'image_url', url);
+      updateQuestion(idx, 'imageUrl', url);
       toast.success('Image uploaded', { id: uploadToast });
     } catch (err) {
       toast.error('Image upload failed', { id: uploadToast });
@@ -109,30 +108,19 @@ export default function ExamEditor() {
     if (!title.trim()) { toast.error('Please enter exam title'); return; }
     setSaving(true);
     try {
-      const payload = questions.map((q, i) => ({
-        subject: q.subject,
-        question_text: q.question_text,
-        image_url: q.image_url,
-        option_a: q.option_a,
-        option_b: q.option_b,
-        option_c: q.option_c,
-        option_d: q.option_d,
-        option_e: q.option_e,
-        correct_option: q.correct_option,
-        marks: q.marks,
-        negative_marks: q.negative_marks,
-        question_order: i + 1,
-      }));
+      const payload = {
+        id: isNew ? null : id,
+        title,
+        description,
+        durationMinutes,
+        totalMarks: questions.reduce((acc, q) => acc + q.marks, 0),
+        questions: questions.map((q, i) => ({
+          ...q,
+          questionOrder: i + 1,
+        })),
+      };
 
-      const { error } = await supabase.rpc('upsert_exam_with_questions', {
-        _exam_id: isNew ? null : id!,
-        _title: title,
-        _description: description,
-        _duration_minutes: durationMinutes,
-        _questions: payload,
-      });
-      if (error) throw error;
-
+      await api.exams.save(payload);
       toast.success('Exam saved!');
       navigate('/admin/dashboard');
     } catch (err: unknown) {
@@ -204,11 +192,11 @@ export default function ExamEditor() {
 
               <div className="space-y-2">
                 <Label>Question</Label>
-                <Textarea value={q.question_text} onChange={e => updateQuestion(idx, 'question_text', e.target.value)} placeholder="Enter question text..." />
-                {q.image_url ? (
+                <Textarea value={q.questionText} onChange={e => updateQuestion(idx, 'questionText', e.target.value)} placeholder="Enter question text..." />
+                {q.imageUrl ? (
                   <div className="relative inline-block mt-2">
-                     <img src={q.image_url} alt="Question" className="max-h-40 rounded border shadow-sm" />
-                     <button type="button" className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:scale-105 transition-transform" onClick={() => updateQuestion(idx, 'image_url', '')}><X className="w-3 h-3" /></button>
+                     <img src={q.imageUrl} alt="Question" className="max-h-40 rounded border shadow-sm" />
+                     <button type="button" className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:scale-105 transition-transform" onClick={() => updateQuestion(idx, 'imageUrl', '')}><X className="w-3 h-3" /></button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 mt-2">
@@ -226,13 +214,13 @@ export default function ExamEditor() {
                     <Label className="text-xs">Option {opt}</Label>
                     <Input
                       value={
-                        opt === 'A' ? q.option_a :
-                        opt === 'B' ? q.option_b :
-                        opt === 'C' ? q.option_c :
-                        opt === 'D' ? q.option_d :
-                        q.option_e
+                        opt === 'A' ? q.optionA :
+                        opt === 'B' ? q.optionB :
+                        opt === 'C' ? q.optionC :
+                        opt === 'D' ? q.optionD :
+                        q.optionE
                       }
-                      onChange={e => updateQuestion(idx, (`option_${opt.toLowerCase()}` as EditableQuestionField), e.target.value)}
+                      onChange={e => updateQuestion(idx, (`option${opt}` as EditableQuestionField), e.target.value)}
                       placeholder={`Option ${opt}`}
                     />
                   </div>
@@ -242,7 +230,7 @@ export default function ExamEditor() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Correct Answer</Label>
-                  <Select value={q.correct_option} onValueChange={v => updateQuestion(idx, 'correct_option', v)}>
+                  <Select value={q.correctOption} onValueChange={v => updateQuestion(idx, 'correctOption', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {['A', 'B', 'C', 'D', 'E'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -255,7 +243,7 @@ export default function ExamEditor() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Negative Marks</Label>
-                  <Input type="number" value={q.negative_marks} onChange={e => updateQuestion(idx, 'negative_marks', Number(e.target.value))} />
+                  <Input type="number" value={q.negativeMarks} onChange={e => updateQuestion(idx, 'negativeMarks', Number(e.target.value))} />
                 </div>
               </div>
             </CardContent>

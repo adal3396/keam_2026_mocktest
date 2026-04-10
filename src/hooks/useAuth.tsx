@@ -1,12 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut, 
+  updateProfile,
+  User
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 type UserRole = 'admin' | 'student';
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   role: UserRole | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
@@ -18,91 +24,73 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const withTimeout = async <T,>(promise: Promise<T>, ms = 15000): Promise<T> => {
-    let t: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      t = setTimeout(() => reject(new Error('Request timed out. Check your internet/Supabase URL/keys.')), ms);
-    });
+  const fetchRole = async (uid: string): Promise<UserRole | null> => {
     try {
-      return await Promise.race([promise, timeout]);
-    } finally {
-      if (t) clearTimeout(t);
+      const response = await fetch(`/api/auth?userId=${uid}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.role;
+    } catch (err) {
+      console.error('Fetch role error:', err);
+      return null;
     }
   };
 
-  const fetchRole = async (userId: string): Promise<UserRole | null> => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .order('role', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    return (data?.role as UserRole | undefined) ?? null;
+  const syncProfile = async (uid: string, fullName: string, email: string) => {
+    try {
+      await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid, fullName, email }),
+      });
+    } catch (err) {
+      console.error('Sync profile error:', err);
+    }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-          setSession(session);
-          setUser(session?.user ?? null);
-          return;
-        }
-
-        setLoading(true);
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setRole(null);
-          const nextRole = await fetchRole(session.user.id);
-          setRole(nextRole);
-        } else {
-          setRole(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRole(session.user.id).then((nextRole) => setRole(nextRole));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        const nextRole = await fetchRole(firebaseUser.uid);
+        setRole(nextRole);
       } else {
         setRole(null);
       }
+      
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await withTimeout(supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
-    }));
-    if (error) throw error;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, { displayName: fullName });
+    
+    // Sync with our database
+    await syncProfile(userCredential.user.uid, fullName, email);
+    
+    // Refresh role
+    const nextRole = await fetchRole(userCredential.user.uid);
+    setRole(nextRole);
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }));
-    if (error) throw error;
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await firebaseSignOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
