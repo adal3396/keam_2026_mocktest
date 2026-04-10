@@ -69,11 +69,27 @@ export default function StudentDashboard() {
         return;
       }
 
-      setExams(examsData.filter((e: any) => e.isActive));
+      const newExams = examsData.filter((e: any) => e.isActive);
+      
+      setExams(prevExams => {
+        // If this is a silent poll and we have a new exam that wasn't there before
+        if (silent && prevExams.length > 0 && newExams.length > prevExams.length) {
+          const newExamIds = new Set(newExams.map((e: any) => e.id));
+          const oldExamIds = new Set(prevExams.map(e => e.id));
+          for (const id of newExamIds) {
+            if (!oldExamIds.has(id)) {
+              toast.success('Live Update: A new Mock Test has just been activated!', { duration: 5000 });
+              break;
+            }
+          }
+        }
+        return newExams;
+      });
       setAttempts(attemptsData || []);
     } catch (err) {
       console.error('Dashboard load error:', err);
-      setError('Something went wrong. Please check your connection and try again.');
+      // Only set error on initial load to avoid interrupting the user during polling
+      if (!silent) setError('Something went wrong. Please check your connection and try again.');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -81,6 +97,11 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     loadData();
+    // Realtime polling for live exam activation sync
+    const interval = setInterval(() => {
+      loadData(true);
+    }, 5000); // Check every 5 seconds for snappy realtime feel
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleStartExamClick = (exam: Exam, hasAttempt: boolean) => {

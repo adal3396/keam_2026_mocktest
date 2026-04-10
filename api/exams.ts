@@ -26,39 +26,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         let examId = id;
         
-        await db.transaction(async (tx) => {
-          if (examId) {
-            // Update
-            await tx.update(exams).set({
-              title,
-              description,
-              durationMinutes,
-              totalMarks,
-              updatedAt: new Date(),
-            }).where(eq(exams.id, examId));
-            
-            // Delete old questions
-            await tx.delete(questions).where(eq(questions.examId, examId));
-          } else {
-            // Create
-            const [newExam] = await tx.insert(exams).values({
-              title,
-              description,
-              durationMinutes,
-              totalMarks,
-            }).returning({ id: exams.id });
-            examId = newExam.id;
-          }
+        if (examId) {
+          // Update
+          await db.update(exams).set({
+            title,
+            description,
+            durationMinutes,
+            totalMarks,
+            updatedAt: new Date(),
+          }).where(eq(exams.id, examId));
+          
+          // Delete old questions
+          await db.delete(questions).where(eq(questions.examId, examId));
+        } else {
+          // Create
+          const [newExam] = await db.insert(exams).values({
+            title,
+            description,
+            durationMinutes,
+            totalMarks,
+          }).returning({ id: exams.id });
+          examId = newExam.id;
+        }
 
-          if (questionsData && questionsData.length > 0) {
-            await tx.insert(questions).values(
-              questionsData.map((q: any) => ({
-                ...q,
-                examId: examId,
-              }))
-            );
-          }
-        });
+        if (questionsData && questionsData.length > 0) {
+          await db.insert(questions).values(
+            questionsData.map((q: any) => ({
+              ...q,
+              examId: examId,
+            }))
+          );
+        }
 
         return res.status(200).json({ id: examId });
       }

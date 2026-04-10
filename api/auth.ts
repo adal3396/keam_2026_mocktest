@@ -29,32 +29,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'POST': {
         const { userId, fullName, email, role } = req.body;
         
-        await db.transaction(async (tx) => {
-          // Upsert profile
-          const existingProfile = await tx.query.profiles.findFirst({
-            where: eq(profiles.userId, userId),
-          });
-
-          if (existingProfile) {
-            await tx.update(profiles)
-              .set({ fullName, email, updatedAt: new Date() })
-              .where(eq(profiles.userId, userId));
-          } else {
-            await tx.insert(profiles).values({ userId, fullName, email });
-          }
-
-          // Upsert role
-          const existingRole = await tx.query.userRoles.findFirst({
-            where: eq(userRoles.userId, userId),
-          });
-
-          if (!existingRole) {
-            await tx.insert(userRoles).values({ 
-              userId, 
-              role: role || 'student' 
-            });
-          }
+        // Upsert profile
+        const existingProfile = await db.query.profiles.findFirst({
+          where: eq(profiles.userId, userId),
         });
+
+        if (existingProfile) {
+          await db.update(profiles)
+            .set({ fullName, email, updatedAt: new Date() })
+            .where(eq(profiles.userId, userId));
+        } else {
+          await db.insert(profiles).values({ userId, fullName, email });
+        }
+
+        // Upsert role
+        const existingRole = await db.query.userRoles.findFirst({
+          where: eq(userRoles.userId, userId),
+        });
+
+        if (!existingRole) {
+          await db.insert(userRoles).values({ 
+            userId, 
+            role: role || 'student' 
+          });
+        }
 
         return res.status(200).json({ success: true });
       }
