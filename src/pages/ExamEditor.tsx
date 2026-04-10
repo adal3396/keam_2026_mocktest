@@ -73,7 +73,18 @@ export default function ExamEditor() {
   };
 
   const updateQuestion = (idx: number, field: EditableQuestionField, value: any) => {
-    setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
+    let finalValue = value;
+    
+    // Auto-convert Google Drive links to direct image links
+    if (field === 'imageUrl' && typeof value === 'string' && value.includes('drive.google.com')) {
+      const fileIdMatch = value.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || value.match(/id=([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        finalValue = `https://lh3.googleusercontent.com/u/0/d/${fileIdMatch[1]}`;
+        toast.info('Google Drive link auto-converted to direct image link!');
+      }
+    }
+
+    setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: finalValue } : q));
   };
 
   const removeQuestion = (idx: number) => {
