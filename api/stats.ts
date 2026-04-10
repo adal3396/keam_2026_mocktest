@@ -1,5 +1,5 @@
-import { db } from './db/index';
-import { exams, examAttempts, userRoles } from './db/schema';
+import { db } from '../src/db/index.js';
+import { exams, examAttempts, userRoles } from '../src/db/schema.js';
 import { count, eq } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 

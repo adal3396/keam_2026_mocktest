@@ -1,5 +1,5 @@
-import { db } from './db/index';
-import { profiles, userRoles } from './db/schema';
+import { db } from '../src/db/index.js';
+import { profiles, userRoles } from '../src/db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
