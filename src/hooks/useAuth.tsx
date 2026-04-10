@@ -27,15 +27,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchRole = async (uid: string): Promise<UserRole | null> => {
+  const fetchRole = async (uid: string): Promise<UserRole> => {
     try {
-      const response = await fetch(`/api/auth?userId=${uid}`);
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data.role;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(`/api/auth?userId=${uid}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!response.ok) return 'student';
+      const text = await response.text();
+      // Guard: if response is not JSON (e.g. Vite serves raw TS file locally)
+      try {
+        const data = JSON.parse(text);
+        return data.role ?? 'student';
+      } catch {
+        console.warn('Role API returned non-JSON. Defaulting to student.');
+        return 'student';
+      }
     } catch (err) {
-      console.error('Fetch role error:', err);
-      return null;
+      console.warn('Fetch role error (API unreachable). Defaulting to student:', err);
+      return 'student';
     }
   };
 

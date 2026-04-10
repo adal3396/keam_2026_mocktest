@@ -41,16 +41,33 @@ export default function StudentDashboard() {
 
   const studentName = user?.displayName || user?.email?.split('@')[0] || 'Student';
 
+  const safeJson = async (resp: Response) => {
+    try {
+      const text = await resp.text();
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  };
+
   const loadData = async (silent = false) => {
     if (!user) return;
     if (!silent) setLoading(true);
     setError(null);
 
     try {
-      const [examsData, attemptsData] = await Promise.all([
-        api.exams.list(),
-        fetch(`/api/attempts?userId=${user.uid}`).then(r => r.json())
+      const [examsResp, attemptsResp] = await Promise.all([
+        fetch('/api/exams'),
+        fetch(`/api/attempts?userId=${user.uid}`)
       ]);
+
+      const examsData = await safeJson(examsResp);
+      const attemptsData = await safeJson(attemptsResp);
+
+      if (!examsData || !attemptsData) {
+        setError('Could not connect to the server. Please ensure the app is deployed or run with "vercel dev".');
+        return;
+      }
 
       setExams(examsData.filter((e: any) => e.isActive));
       setAttempts(attemptsData || []);
