@@ -37,6 +37,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedExamForInstructions, setSelectedExamForInstructions] = useState<Exam | null>(null);
+  const [activePopupExam, setActivePopupExam] = useState<Exam | null>(null);
   const [isStartingExam, setIsStartingExam] = useState(false);
 
   const studentName = user?.displayName || user?.email?.split('@')[0] || 'Student';
@@ -78,7 +79,10 @@ export default function StudentDashboard() {
           const oldExamIds = new Set(prevExams.map(e => e.id));
           for (const id of newExamIds) {
             if (!oldExamIds.has(id)) {
-              toast.success('Live Update: A new Mock Test has just been activated!', { duration: 5000 });
+              const popupExam = newExams.find((e: any) => e.id === id);
+              if (popupExam) {
+                 setActivePopupExam(popupExam);
+              }
               break;
             }
           }
@@ -315,6 +319,38 @@ export default function StudentDashboard() {
                 className="gap-2"
               >
                 {isStartingExam ? 'Starting...' : <><CheckCircle2 className="w-4 h-4" /> I Agree, Start Test</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!activePopupExam} onOpenChange={(open) => !open && setActivePopupExam(null)}>
+          <DialogContent className="sm:max-w-md border-primary/20">
+            <DialogHeader>
+              <DialogTitle className="text-2xl text-center text-primary font-heading font-bold">
+                Good Luck, {studentName}!
+              </DialogTitle>
+              <DialogDescription className="text-center text-lg mt-2 text-foreground">
+                A new KEAM Mock Test has just been activated by the administrator.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="bg-primary/5 p-6 rounded-xl border border-primary/20 my-2 text-center">
+               <p className="font-heading font-bold text-xl">{activePopupExam?.title}</p>
+               <p className="opacity-70 mt-2 font-medium">{activePopupExam?.durationMinutes} Minutes • {activePopupExam?.totalMarks} Marks</p>
+            </div>
+            <DialogFooter className="sm:justify-center flex-col sm:flex-row gap-3">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setActivePopupExam(null)}>
+                Not Now
+              </Button>
+              <Button 
+                className="w-full sm:w-auto shadow-lg shadow-primary/30 animate-pulse-soft gap-2" 
+                onClick={() => {
+                  if (activePopupExam) {
+                    setActivePopupExam(null);
+                    setSelectedExamForInstructions(activePopupExam);
+                  }
+                }}
+              >
+                <PlayCircle className="w-5 h-5" /> Start Test Now
               </Button>
             </DialogFooter>
           </DialogContent>
