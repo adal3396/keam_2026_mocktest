@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
-import { auth, storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth } from '@/lib/firebase';
 import AppHeader from '@/components/layout/AppHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,15 +30,6 @@ interface Question {
 
 type EditableQuestionField = keyof Question;
 
-const uploadImage = async (file: File) => {
-  const fileExt = file.name.split('.').pop();
-  const filePath = `exam-images/${Math.random()}.${fileExt}`;
-  const storageRef = ref(storage, filePath);
-  
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
-  return url;
-};
 
 export default function ExamEditor() {
   const { id } = useParams();
@@ -90,19 +80,6 @@ export default function ExamEditor() {
     setQuestions(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const uploadToast = toast.loading('Uploading image...');
-    try {
-      const url = await uploadImage(file);
-      updateQuestion(idx, 'imageUrl', url);
-      toast.success('Image uploaded', { id: uploadToast });
-    } catch (err) {
-      toast.error('Image upload failed', { id: uploadToast });
-    }
-    e.target.value = '';
-  };
 
   const save = async () => {
     if (!title.trim()) { toast.error('Please enter exam title'); return; }
@@ -193,19 +170,28 @@ export default function ExamEditor() {
               <div className="space-y-2">
                 <Label>Question</Label>
                 <Textarea value={q.questionText} onChange={e => updateQuestion(idx, 'questionText', e.target.value)} placeholder="Enter question text..." />
-                {q.imageUrl ? (
-                  <div className="relative inline-block mt-2">
-                     <img src={q.imageUrl} alt="Question" className="max-h-40 rounded border shadow-sm" />
-                     <button type="button" className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:scale-105 transition-transform" onClick={() => updateQuestion(idx, 'imageUrl', '')}><X className="w-3 h-3" /></button>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        value={q.imageUrl || ''} 
+                        onChange={e => updateQuestion(idx, 'imageUrl', e.target.value)} 
+                        placeholder="Paste image URL (e.g. https://example.com/image.png)" 
+                        className="flex-1"
+                      />
+                    </div>
+                    {q.imageUrl && (
+                      <div className="relative inline-block mt-2">
+                        <img src={q.imageUrl} alt="Question" className="max-h-40 rounded border shadow-sm" />
+                        <button 
+                          type="button" 
+                          className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:scale-105 transition-transform shadow-lg" 
+                          onClick={() => updateQuestion(idx, 'imageUrl', '')}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 mt-2">
-                    <Label className="cursor-pointer flex items-center gap-2 border p-2 rounded-md hover:bg-muted/50 transition-colors text-sm text-muted-foreground">
-                      <ImagePlus className="w-4 h-4" /> Add Image
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, idx)} />
-                    </Label>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
