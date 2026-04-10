@@ -1,4 +1,4 @@
-import { db } from './db';
+import { db } from './db/index';
 import { profiles, userRoles } from './db/schema';
 import { eq } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';

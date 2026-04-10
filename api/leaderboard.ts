@@ -1,4 +1,4 @@
-import { db } from './db';
+import { db } from './db/index';
 import { examAttempts, profiles } from './db/schema';
 import { eq, desc } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
