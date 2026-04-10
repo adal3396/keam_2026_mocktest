@@ -50,12 +50,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (questionsData && questionsData.length > 0) {
-          await db.insert(questions).values(
-            questionsData.map((q: any) => ({
-              ...q,
+          const sanitizedQuestions = questionsData.map((q: any) => {
+            const { id, createdAt, updatedAt, ...rest } = q;
+            return {
+              ...rest,
               examId: examId,
-            }))
-          );
+            };
+          });
+          await db.insert(questions).values(sanitizedQuestions);
         }
 
         return res.status(200).json({ id: examId });

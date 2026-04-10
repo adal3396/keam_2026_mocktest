@@ -150,6 +150,10 @@ export default function ExamTaking() {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  
+  if (!questions || questions.length === 0) {
+    return <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4"><h2 className="text-xl font-bold mb-2">No Questions Found</h2><p className="mb-4">This exam does not have any questions available to take. It may be improperly configured.</p><Button onClick={() => navigate('/dashboard')}>Return to Dashboard</Button></div>;
+  }
 
   const currentQuestion = questions[currentIdx];
   const formatTime = (s: number) => {
