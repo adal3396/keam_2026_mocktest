@@ -73,18 +73,15 @@ export default function StudentDashboard() {
       const newExams = examsData.filter((e: any) => e.isActive);
       
       setExams(prevExams => {
-        // If this is a silent poll and we have a new exam that wasn't there before
-        if (silent && prevExams.length > 0 && newExams.length > prevExams.length) {
-          const newExamIds = new Set(newExams.map((e: any) => e.id));
+        // Find any exam that exists in newExams but NOT in prevExams
+        if (silent && newExams.length > 0) {
           const oldExamIds = new Set(prevExams.map(e => e.id));
-          for (const id of newExamIds) {
-            if (!oldExamIds.has(id)) {
-              const popupExam = newExams.find((e: any) => e.id === id);
-              if (popupExam) {
-                 setActivePopupExam(popupExam);
-              }
-              break;
-            }
+          const actualNewExams = newExams.filter(e => !oldExamIds.has(e.id));
+          
+          if (actualNewExams.length > 0) {
+            console.log('Realtime discovery: New exams activated', actualNewExams);
+            // Trigger the first new one found
+            setActivePopupExam(actualNewExams[0]);
           }
         }
         return newExams;
@@ -92,7 +89,6 @@ export default function StudentDashboard() {
       setAttempts(attemptsData || []);
     } catch (err) {
       console.error('Dashboard load error:', err);
-      // Only set error on initial load to avoid interrupting the user during polling
       if (!silent) setError('Something went wrong. Please check your connection and try again.');
     } finally {
       if (!silent) setLoading(false);
@@ -103,8 +99,9 @@ export default function StudentDashboard() {
     loadData();
     // Realtime polling for live exam activation sync
     const interval = setInterval(() => {
+      console.log('Poll: Checking for new exam activations...');
       loadData(true);
-    }, 5000); // Check every 5 seconds for snappy realtime feel
+    }, 5000); 
     return () => clearInterval(interval);
   }, [user]);
 
