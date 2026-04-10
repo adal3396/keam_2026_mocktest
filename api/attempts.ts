@@ -1,6 +1,6 @@
 import { db } from './db';
 import { examAttempts, answers, questions, exams } from './db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -80,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             selectedOption,
             isMarkedForReview,
             answeredAt: new Date(),
-          }).eq(answers.id, existing.id);
+          }).where(eq(answers.id, existing.id));
         } else {
           await db.insert(answers).values({
             attemptId,
@@ -130,7 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           totalCorrect,
           totalWrong,
           totalUnanswered,
-        }).eq(examAttempts.id, id).returning();
+        }).where(eq(examAttempts.id, id)).returning();
 
         return res.status(200).json(updated);
       }

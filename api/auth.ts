@@ -36,7 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
 
           if (existingProfile) {
-            await tx.update(profiles).set({ fullName, email, updatedAt: new Date() }).eq(profiles.userId, userId);
+            await tx.update(profiles)
+              .set({ fullName, email, updatedAt: new Date() })
+              .where(eq(profiles.userId, userId));
           } else {
             await tx.insert(profiles).values({ userId, fullName, email });
           }

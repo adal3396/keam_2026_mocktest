@@ -35,11 +35,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               durationMinutes,
               totalMarks,
               updatedAt: new Date(),
-            }).eq(exams.id, examId);
+            }).where(eq(exams.id, examId));
             
-            // Delete old questions or update? Simpler to delete and re-insert for now
-            // mimicking the RPC 'upsert_exam_with_questions' behavior if possible
-            await tx.delete(questions).eq(questions.examId, examId);
+            // Delete old questions
+            await tx.delete(questions).where(eq(questions.examId, examId));
           } else {
             // Create
             const [newExam] = await tx.insert(exams).values({
@@ -66,13 +65,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case 'PATCH': {
         const { id, isActive } = req.body;
-        await db.update(exams).set({ isActive }).eq(exams.id, id);
+        await db.update(exams).set({ isActive }).where(eq(exams.id, id));
         return res.status(200).json({ success: true });
       }
 
       case 'DELETE': {
         const { id } = req.query;
-        await db.delete(exams).eq(exams.id, id as string);
+        await db.delete(exams).where(eq(exams.id, id as string));
         return res.status(200).json({ success: true });
       }
 
