@@ -113,18 +113,7 @@ export default function StudentDashboard() {
   };
 
   const startExam = async (examId: string) => {
-    setIsStartingExam(true);
-    try {
-      const data = await api.attempts.start(examId, user!.uid);
-      if (!data) throw new Error('Failed to start attempt');
-      navigate(`/exam/${data.id}`);
-    } catch (err) {
-      console.error('Start exam error:', err);
-      toast.error('Unable to start exam. Please try again.');
-      setSelectedExamForInstructions(null);
-    } finally {
-      setIsStartingExam(false);
-    }
+    navigate(`/exam/${examId}`);
   };
 
   if (loading) return (

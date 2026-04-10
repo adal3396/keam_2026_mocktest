@@ -46,7 +46,7 @@ const AnimatedRoutes = () => {
         <Route path="/dashboard" element={<PageTransition><RequireAuth><Dashboard /></RequireAuth></PageTransition>} />
         <Route path="/admin/dashboard" element={<PageTransition><RequireAdmin><AdminPage /></RequireAdmin></PageTransition>} />
         <Route path="/admin/exam/:id" element={<PageTransition><RequireAdmin><ExamEditor /></RequireAdmin></PageTransition>} />
-        <Route path="/exam/:attemptId" element={<PageTransition><RequireAuth><ExamTaking /></RequireAuth></PageTransition>} />
+        <Route path="/exam/:examId" element={<PageTransition><RequireAuth><ExamTaking /></RequireAuth></PageTransition>} />
         <Route path="/results/:attemptId" element={<PageTransition><RequireAuth><Results /></RequireAuth></PageTransition>} />
         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
