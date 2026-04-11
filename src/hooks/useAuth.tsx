@@ -69,6 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const nextRole = await fetchRole(firebaseUser.uid);
         setRole(nextRole);
+        
+        // Ensure profile is synced on login/refresh if it's potentially missing
+        if (firebaseUser.displayName || firebaseUser.email) {
+          syncProfile(
+            firebaseUser.uid, 
+            firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
+            firebaseUser.email || ''
+          );
+        }
       } else {
         setRole(null);
       }

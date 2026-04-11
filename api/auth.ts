@@ -35,11 +35,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         if (existingProfile) {
-          await db.update(profiles)
-            .set({ fullName, email, updatedAt: new Date() })
-            .where(eq(profiles.userId, userId));
+          // Only update if something changed
+          if (existingProfile.fullName !== fullName || existingProfile.email !== email) {
+            await db.update(profiles)
+              .set({ 
+                fullName: fullName || existingProfile.fullName, 
+                email: email || existingProfile.email, 
+                updatedAt: new Date() 
+              })
+              .where(eq(profiles.userId, userId));
+          }
         } else {
-          await db.insert(profiles).values({ userId, fullName, email });
+          await db.insert(profiles).values({ userId, fullName: fullName || 'Student', email: email || '' });
         }
 
         // Upsert role
