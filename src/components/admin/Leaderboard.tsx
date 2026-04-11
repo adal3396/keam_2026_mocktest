@@ -60,7 +60,11 @@ export default function Leaderboard() {
           <SelectValue placeholder="Select exam" />
         </SelectTrigger>
         <SelectContent>
-          {exams.map(e => <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>)}
+          {exams.map(e => (
+            <SelectItem key={e.id} value={e.id}>
+              {e.title} {(e as any).attemptCount > 0 && `(${(e as any).attemptCount} submissions)`}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

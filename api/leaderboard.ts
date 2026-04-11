@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         submittedAt: examAttempts.submittedAt,
       })
       .from(examAttempts)
-      .innerJoin(profiles, eq(profiles.userId, examAttempts.userId))
+      .leftJoin(profiles, eq(profiles.userId, examAttempts.userId))
       .where(eq(examAttempts.examId, examId as string))
       .orderBy(desc(examAttempts.totalScore))
       .limit(50);

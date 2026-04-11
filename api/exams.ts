@@ -1,6 +1,6 @@
 import { db } from '../src/db/index.js';
-import { exams, questions } from '../src/db/schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { exams, questions, examAttempts } from '../src/db/schema.js';
+import { eq, desc, count } from 'drizzle-orm';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -17,7 +17,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
           return res.status(200).json(exam);
         }
-        const allExams = await db.select().from(exams).orderBy(desc(exams.createdAt));
+        const allExams = await db
+          .select({
+            id: exams.id,
+            title: exams.title,
+            description: exams.description,
+            durationMinutes: exams.durationMinutes,
+            totalMarks: exams.totalMarks,
+            isActive: exams.isActive,
+            createdAt: exams.createdAt,
+            attemptCount: count(examAttempts.id),
+          })
+          .from(exams)
+          .leftJoin(examAttempts, eq(examAttempts.examId, exams.id))
+          .groupBy(exams.id)
+          .orderBy(desc(exams.createdAt));
         return res.status(200).json(allExams);
       }
 
