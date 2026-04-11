@@ -81,8 +81,11 @@ export default function Leaderboard() {
                   {idx < 3 ? <Trophy className={`w-5 h-5 ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : 'text-orange-600'}`} /> : idx + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{entry.fullName || entry.email || 'Student'}</p>
-                  <p className="text-sm text-muted-foreground">{entry.totalCorrect} correct answers</p>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-slate-900">{entry.fullName || 'Student'}</span>
+                    <span className="text-xs text-muted-foreground font-mono">{entry.email}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{entry.totalCorrect} correct answers</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-heading font-bold text-primary">{entry.totalScore}</p>
