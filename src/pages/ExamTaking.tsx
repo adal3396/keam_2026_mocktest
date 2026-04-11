@@ -102,7 +102,7 @@ export default function ExamTaking() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          submitExam(true);
+          submitExam(true, 'timeout');
           return 0;
         }
         return prev - 1;
@@ -110,6 +110,25 @@ export default function ExamTaking() {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, loading]);
+
+  useEffect(() => {
+    if (loading || submitting) return;
+
+    const handleViolations = () => {
+      if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+        console.warn('Cheating detected: window switch/blur');
+        submitExam(true, 'cheating');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleViolations);
+    window.addEventListener('blur', handleViolations);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleViolations);
+      window.removeEventListener('blur', handleViolations);
+    };
+  }, [loading, submitting, attempt]);
 
   const selectOption = async (option: string) => {
     if (!attempt || !questions[currentIdx]) return;
@@ -174,7 +193,7 @@ export default function ExamTaking() {
     }
   };
 
-  const submitExam = async (autoSubmit = false) => {
+  const submitExam = async (autoSubmit = false, reason: 'timeout' | 'cheating' | 'manual' = 'manual') => {
     if (!attempt || submitting) return;
     if (!autoSubmit && timeLeft > 0 && !confirm('Are you sure you want to submit? You cannot change answers after submission.')) return;
     
@@ -182,7 +201,12 @@ export default function ExamTaking() {
     const tId = toast.loading('Calculating results...');
     try {
       await api.attempts.submit(attempt.id);
-      toast.success(autoSubmit ? 'Time up! Test auto-submitted.' : 'Exam submitted successfully!', { id: tId });
+      
+      let message = 'Exam submitted successfully!';
+      if (reason === 'timeout') message = 'Time up! Test auto-submitted.';
+      if (reason === 'cheating') message = 'Window switch detected! Test auto-submitted as per rules.';
+      
+      toast.success(message, { id: tId });
       navigate(`/results/${attempt.id}`);
     } catch (err) {
       toast.error('Submission failed. Please try again.', { id: tId });
@@ -242,6 +266,9 @@ export default function ExamTaking() {
     <div className="min-h-screen bg-muted flex flex-col">
       {/* KEAM-style header */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-50">
+        <div className="bg-destructive text-white text-[10px] sm:text-xs py-1 px-4 text-center font-bold uppercase tracking-widest animate-pulse">
+           Warning: Switching tabs or windows will result in immediate automatic submission.
+        </div>
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3">
             <img src={logoImage} alt="KSU GECT logo" className="h-10 w-auto object-contain py-1" />
